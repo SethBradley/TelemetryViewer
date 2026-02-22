@@ -1,0 +1,446 @@
+<Window x:Class="TelemetryViewer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:TelemetryViewer.ViewModels"
+        xmlns:cvt="clr-namespace:TelemetryViewer.Converters"
+        Title="TD Sim Dashboard" Height="820" Width="1100"
+        MinHeight="700" MinWidth="900"
+        Background="#0D1117" Foreground="#C9D1D9"
+        FontFamily="Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <cvt:BoolToVisibilityConverter x:Key="BoolVis"/>
+
+        <!-- Panel border style -->
+        <Style x:Key="PanelBorder" TargetType="Border">
+            <Setter Property="Background" Value="#161B22"/>
+            <Setter Property="BorderBrush" Value="#30363D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Margin" Value="4"/>
+        </Style>
+
+        <!-- Section header -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#8B949E"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Stat label -->
+        <Style x:Key="StatLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#8B949E"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Stat value -->
+        <Style x:Key="StatValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#E6EDF3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <!-- HP ProgressBar -->
+        <Style x:Key="HpBar" TargetType="ProgressBar">
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Background" Value="#21262D"/>
+            <Setter Property="BorderBrush" Value="#30363D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Time ProgressBar -->
+        <Style x:Key="TimeBar" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="Background" Value="#21262D"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#1F6FEB"/>
+        </Style>
+
+        <!-- ListView style (no highlight, transparent) -->
+        <Style x:Key="CleanListView" TargetType="ListView">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#C9D1D9"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+
+        <Style x:Key="CleanListItem" TargetType="ListViewItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0,1"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <ContentPresenter Margin="0,1"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============ ROW 0: HEADER BAR ============ -->
+        <Border Grid.Row="0" Style="{StaticResource PanelBorder}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding TrialDisplay}"
+                           FontSize="15" FontWeight="Bold" Foreground="#E6EDF3"
+                           VerticalAlignment="Center"/>
+
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0">
+                    <Run Text="Profile: " Foreground="#8B949E"/>
+                    <Run Text="{Binding BuildProfile}" Foreground="#FFA657" FontWeight="SemiBold"/>
+                    <Run Text="    Seed: " Foreground="#8B949E"/>
+                    <Run Text="{Binding Seed}" Foreground="#C9D1D9"/>
+                    <Run Text="    Difficulty: " Foreground="#8B949E"/>
+                    <Run Text="{Binding DifficultyScalar, StringFormat='{}{0:F4}'}" Foreground="#C9D1D9"/>
+                </TextBlock>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ElapsedDisplay}" FontSize="18" FontWeight="Bold"
+                               Foreground="#E6EDF3" FontFamily="Consolas"/>
+                    <TextBlock Text=" / " Foreground="#484F58" FontSize="18" FontFamily="Consolas"/>
+                    <TextBlock Text="{Binding DurationDisplay}" FontSize="18"
+                               Foreground="#484F58" FontFamily="Consolas"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Time progress thin bar -->
+        <ProgressBar Grid.Row="1" Style="{StaticResource TimeBar}"
+                     Value="{Binding TimeProgress}" Margin="4,0,4,4"/>
+
+        <!-- ============ BANNER (starting/survived/dead/idle) ============ -->
+        <Border Grid.Row="2" Style="{StaticResource PanelBorder}"
+                Visibility="{Binding ShowBanner, Converter={StaticResource BoolVis}}"
+                HorizontalAlignment="Stretch">
+            <TextBlock Text="{Binding BannerText}"
+                       Foreground="{Binding BannerBrush}"
+                       FontSize="22" FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Padding="0,6"/>
+        </Border>
+
+        <!-- ============ ROW 3: MAIN CONTENT (two‑column grid) ============ -->
+        <Grid Grid.Row="3"
+              Visibility="{Binding ShowMainPanels, Converter={StaticResource BoolVis}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Tower HP section -->
+            <Border Grid.Row="0" Style="{StaticResource PanelBorder}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource SectionHeader}" Text="TOWER HP"/>
+                        <TextBlock Grid.Column="1" Foreground="#8B949E" FontSize="12">
+                            <Run Text="Armor: "/><Run Text="{Binding TowerArmor, StringFormat='{}{0:N0}'}" Foreground="#E6EDF3"/>
+                            <Run Text="   Regen: "/><Run Text="{Binding TowerRegen, StringFormat='{}{0:N0}/s'}" Foreground="#79C0FF"/>
+                            <Run Text="   Diff: "/><Run Text="{Binding DifficultyMult, StringFormat='{}{0:F2}x'}" Foreground="#FFA657"/>
+                        </TextBlock>
+                    </Grid>
+
+                    <Grid>
+                        <ProgressBar Style="{StaticResource HpBar}"
+                                     Value="{Binding TowerHpPct}"
+                                     Foreground="{Binding HpBarBrush}"/>
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   FontSize="12" FontWeight="SemiBold" Foreground="#E6EDF3">
+                            <Run Text="{Binding TowerHp, StringFormat='{}{0:N0}'}"/>
+                            <Run Text=" / " Foreground="#484F58"/>
+                            <Run Text="{Binding TowerMaxHp, StringFormat='{}{0:N0}'}"/>
+                            <Run Text="{Binding TowerHpPct, StringFormat=' ({0:N0}%)'}" Foreground="#8B949E"/>
+                        </TextBlock>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Two‑column panels -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- LOADOUT -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="LOADOUT"/>
+                        <ListView ItemsSource="{Binding Loadout}"
+                                  Style="{StaticResource CleanListView}"
+                                  ItemContainerStyle="{StaticResource CleanListItem}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Foreground="#E6EDF3">
+                                            <Run Text="{Binding Name}"/>
+                                            <Run Text="{Binding Stacks}" Foreground="#79C0FF"/>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="1" Text="{Binding Dps}"
+                                                   Foreground="#FFA657" Margin="8,0" FontSize="11"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Range}"
+                                                   Foreground="#8B949E" Margin="4,0" FontSize="11"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Tier}"
+                                                   Foreground="#484F58" Margin="4,0" FontSize="11"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </DockPanel>
+                </Border>
+
+                <!-- UPGRADES -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="UPGRADES"/>
+                        <ListView ItemsSource="{Binding UpgradesList}"
+                                  Style="{StaticResource CleanListView}"
+                                  ItemContainerStyle="{StaticResource CleanListItem}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#E6EDF3"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                   Foreground="#79C0FF" FontWeight="SemiBold"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </DockPanel>
+                </Border>
+
+                <!-- ECONOMY -->
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="ECONOMY"/>
+                        <StackPanel>
+                            <Grid Margin="0,2">
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Gold"/>
+                                <TextBlock Style="{StaticResource StatValue}"
+                                           Text="{Binding Gold, StringFormat='{}{0:N0}'}"
+                                           Foreground="#FFA657" FontSize="14"/>
+                            </Grid>
+                            <Grid Margin="0,2">
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Earned"/>
+                                <TextBlock Style="{StaticResource StatValue}"
+                                           Text="{Binding TotalEarned, StringFormat='{}{0:N0}'}"/>
+                            </Grid>
+                            <Grid Margin="0,2">
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Spent"/>
+                                <TextBlock Style="{StaticResource StatValue}"
+                                           Text="{Binding TotalSpent, StringFormat='{}{0:N0}'}"/>
+                            </Grid>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- ENEMIES -->
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="ENEMIES"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <TextBlock Margin="0,2" Foreground="#E6EDF3">
+                                    <Run Text="Alive: " Foreground="#8B949E"/>
+                                    <Run Text="{Binding EnemiesAlive}" FontWeight="SemiBold"/>
+                                    <Run Text="{Binding PeakAlive, StringFormat=' (peak {0})'}" Foreground="#484F58"/>
+                                </TextBlock>
+                                <TextBlock Margin="0,2" Foreground="#8B949E" FontSize="11">
+                                    <Run Text="Spawned: "/><Run Text="{Binding TotalSpawned}" Foreground="#C9D1D9"/>
+                                    <Run Text="  Killed: "/><Run Text="{Binding TotalKilled}" Foreground="#C9D1D9"/>
+                                </TextBlock>
+                                <TextBlock Margin="0,2" Foreground="#8B949E" FontSize="11">
+                                    <Run Text="Leaked: "/><Run Text="{Binding TotalLeaked}" Foreground="#F85149"/>
+                                    <Run Text="  Elites: "/><Run Text="{Binding ElitesSpawned}" Foreground="#F85149"/>
+                                    <Run Text="  Escorts: "/><Run Text="{Binding EscortsSpawned}" Foreground="#E3B341"/>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <ListView Grid.Column="1" ItemsSource="{Binding EnemyBreakdown}"
+                                      Style="{StaticResource CleanListView}"
+                                      ItemContainerStyle="{StaticResource CleanListItem}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                       Foreground="#C9D1D9" FontSize="11"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                       Foreground="#8B949E" FontSize="11" FontWeight="SemiBold"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <!-- COMBAT -->
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="COMBAT"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <Grid Margin="0,2">
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="Dmg Dealt"/>
+                                    <TextBlock Style="{StaticResource StatValue}"
+                                               Text="{Binding DamageDealt, StringFormat='{}{0:N0}'}"/>
+                                </Grid>
+                                <Grid Margin="0,2">
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="HP Spawned"/>
+                                    <TextBlock Style="{StaticResource StatValue}"
+                                               Text="{Binding HpSpawned, StringFormat='{}{0:N0}'}"/>
+                                </Grid>
+                                <Grid Margin="0,2">
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="CC Uptime"/>
+                                    <TextBlock Style="{StaticResource StatValue}"
+                                               Text="{Binding CcUptime, StringFormat='{}{0:N1}%'}"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <Grid Margin="0,2">
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="Tower Dmg"/>
+                                    <TextBlock Style="{StaticResource StatValue}"
+                                               Text="{Binding TowerDamageTaken, StringFormat='{}{0:N0}'}"
+                                               Foreground="#F85149"/>
+                                </Grid>
+                                <Grid Margin="0,2">
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="Healing"/>
+                                    <TextBlock Style="{StaticResource StatValue}"
+                                               Text="{Binding Healing, StringFormat='{}{0:N0}'}"
+                                               Foreground="#79C0FF"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <!-- KILL LOG -->
+                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource PanelBorder}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="KILL LOG"/>
+                        <ListView ItemsSource="{Binding KillLog}"
+                                  Style="{StaticResource CleanListView}"
+                                  ItemContainerStyle="{StaticResource CleanListItem}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="#C9D1D9"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                   Foreground="#8B949E" FontWeight="SemiBold"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ============ ROW 4: EVENT LOG ============ -->
+        <Border Grid.Row="4" Style="{StaticResource PanelBorder}" MaxHeight="160"
+                Visibility="{Binding ShowMainPanels, Converter={StaticResource BoolVis}}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="EVENT LOG"/>
+                <ListView ItemsSource="{Binding EventLog}"
+                          Style="{StaticResource CleanListView}"
+                          ItemContainerStyle="{StaticResource CleanListItem}"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="44"/>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Time}"
+                                           Foreground="#484F58" FontFamily="Consolas" FontSize="11"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Type}"
+                                           Foreground="{Binding Color}" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                           Foreground="#C9D1D9" FontSize="11"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </DockPanel>
+        </Border>
+
+        <!-- ============ ROW 5: HP TIMELINE SPARKLINE ============ -->
+        <Border Grid.Row="5" Style="{StaticResource PanelBorder}" Height="74"
+                Visibility="{Binding ShowMainPanels, Converter={StaticResource BoolVis}}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeader}" Text="HP TIMELINE"/>
+                <Canvas ClipToBounds="True">
+                    <Polyline Points="{Binding HpTimelinePoints}"
+                              Stroke="#238636" StrokeThickness="1.5"
+                              Canvas.Left="0" Canvas.Top="0"/>
+                </Canvas>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
