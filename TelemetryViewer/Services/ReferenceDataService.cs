@@ -6,17 +6,22 @@ namespace TelemetryViewer.Services;
 
 public sealed class ReferenceDataService
 {
-    private const string BasePath = @"C:\Users\sethb\TD-Game";
+    private readonly string _basePath;
 
     public Dictionary<string, WeaponConfig> Weapons { get; private set; } = new();
     public Dictionary<string, EnemyConfig> Enemies { get; private set; } = new();
     public Dictionary<string, UpgradeConfig> Upgrades { get; private set; } = new();
 
+    public ReferenceDataService(string gamePath)
+    {
+        _basePath = gamePath;
+    }
+
     public void Load()
     {
-        Weapons = LoadConfig<WeaponConfig>(Path.Combine(BasePath, "data", "weapons", "weapons_config.json"));
-        Enemies = LoadConfig<EnemyConfig>(Path.Combine(BasePath, "data", "enemies", "enemies_config.json"));
-        Upgrades = LoadConfig<UpgradeConfig>(Path.Combine(BasePath, "data", "upgrades", "upgrades_config.json"));
+        Weapons = LoadConfig<WeaponConfig>(Path.Combine(_basePath, "data", "weapons", "weapons_config.json"));
+        Enemies = LoadConfig<EnemyConfig>(Path.Combine(_basePath, "data", "enemies", "enemies_config.json"));
+        Upgrades = LoadConfig<UpgradeConfig>(Path.Combine(_basePath, "data", "upgrades", "upgrades_config.json"));
     }
 
     public string GetWeaponName(string id) =>

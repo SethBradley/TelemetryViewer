@@ -7,10 +7,10 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
 
-    public MainWindow()
+    public MainWindow(string gamePath)
     {
         InitializeComponent();
-        _vm = new MainViewModel();
+        _vm = new MainViewModel(gamePath);
         DataContext = _vm;
     }
 

@@ -13,12 +13,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly ReferenceDataService _refData;
     private readonly LiveStateWatcherService _watcher;
 
-    public MainViewModel()
+    public MainViewModel(string gamePath)
     {
-        _refData = new ReferenceDataService();
+        _refData = new ReferenceDataService(gamePath);
         _refData.Load();
 
-        _watcher = new LiveStateWatcherService();
+        _watcher = new LiveStateWatcherService(gamePath);
         _watcher.StateUpdated += OnStateUpdated;
         _watcher.Start();
     }
